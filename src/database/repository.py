@@ -490,3 +490,4 @@ def get_db(db_path: Path | str | None = None) -> DatabaseRepository:
         path = db_path or settings.DB_PATH
         _db_instance = DatabaseRepository(path)
     return _db_instance
+

@@ -225,3 +225,4 @@ class ExcelBuilder:
             )
             img.save(dst_path, format="JPEG", quality=88, optimize=True)
         return dst_path
+

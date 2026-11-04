@@ -16,3 +16,4 @@ __all__ = [
     "RowResult",
     "get_dormitory_client",
 ]
+

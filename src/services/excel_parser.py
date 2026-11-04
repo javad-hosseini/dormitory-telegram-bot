@@ -54,7 +54,11 @@ class ExcelParser:
         """Parse the first data sheet of an uploaded workbook into a structured list of dictionaries."""
         file_hash = self.compute_file_hash(file_path)
         display_name = original_file_name or file_path.name
-        wb = openpyxl.load_workbook(file_path, data_only=True)
+
+        try:
+            wb = openpyxl.load_workbook(file_path, data_only=True)
+        except Exception as exc:
+            raise ValueError(f"Invalid or corrupted Excel spreadsheet: {exc}") from exc
 
         # Select the target sheet, avoiding meta tabs like _AI_EXTRACTION_GUIDE
         target_ws: Optional[openpyxl.worksheet.worksheet.Worksheet] = None
@@ -70,17 +74,15 @@ class ExcelParser:
         rows_iter = list(target_ws.iter_rows(values_only=True))
 
         if not rows_iter:
-            return ParsedSheetData(
-                file_name=display_name,
-                file_hash=file_hash,
-                sheet_name=sheet_title,
-                headers=[],
-                rows=[],
-                row_hashes=[],
-            )
+            wb.close()
+            raise ValueError("Spreadsheet is completely empty and missing header row.")
 
         # Row 1: Headers
         raw_headers = rows_iter[0]
+        if not raw_headers or all(h is None or not str(h).strip() for h in raw_headers):
+            wb.close()
+            raise ValueError("Spreadsheet header row is missing or empty.")
+
         headers: List[str] = []
         for i, h in enumerate(raw_headers):
             if h is not None and str(h).strip():
@@ -105,7 +107,12 @@ class ExcelParser:
                 val = row_values[col_idx] if col_idx < len(row_values) else None
 
                 # Normalize datetimes/dates to ISO-8601 strings
-                if isinstance(val, (datetime.date, datetime.datetime)):
+                if isinstance(val, datetime.datetime):
+                    if val.time() == datetime.time(0, 0, 0):
+                        val = val.date().isoformat()
+                    else:
+                        val = val.isoformat()
+                elif isinstance(val, datetime.date):
                     val = val.isoformat()
                 elif isinstance(val, str):
                     val = val.strip()
@@ -117,6 +124,10 @@ class ExcelParser:
             row_hashes.append(r_hash)
 
         wb.close()
+
+        if not parsed_rows:
+            raise ValueError("Spreadsheet contains zero valid data rows.")
+
         return ParsedSheetData(
             file_name=display_name,
             file_hash=file_hash,

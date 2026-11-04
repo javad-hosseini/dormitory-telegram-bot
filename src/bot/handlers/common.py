@@ -82,3 +82,4 @@ async def handle_cancel(message: Message, state: FSMContext) -> None:
             "ℹ️ No active operation was running. Main menu is ready.",
             reply_markup=get_main_menu_keyboard(),
         )
+

@@ -59,3 +59,4 @@ class AuthMiddleware(BaseMiddleware):
             return None
 
         return await handler(event, data)
+

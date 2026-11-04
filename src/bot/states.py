@@ -16,3 +16,4 @@ class IngestStates(StatesGroup):
     preview_and_confirm = State()
     editing_instructions = State()
     handling_duplicates = State()
+

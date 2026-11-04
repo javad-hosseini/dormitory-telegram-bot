@@ -326,3 +326,4 @@ def get_dormitory_client(settings: Settings) -> DormitoryClientBase:
         )
     else:
         return MockDryRunClient()
+

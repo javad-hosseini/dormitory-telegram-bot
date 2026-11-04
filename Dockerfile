@@ -32,3 +32,4 @@ RUN mkdir -p /app/data/sessions /app/data/uploads /app/data/reports
 VOLUME ["/app/data"]
 
 CMD ["python", "-m", "src.main"]
+

@@ -52,3 +52,4 @@ class AlbumMiddleware(BaseMiddleware):
         data["album"] = album_messages
 
         return await handler(event, data)
+

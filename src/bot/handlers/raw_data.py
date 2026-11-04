@@ -514,3 +514,4 @@ async def handle_collecting_row_input(
     blocks = await db.get_blocks_for_row(session.session_id, r_idx)
     summary_text = format_row_summary(r_idx, blocks)
     await message.answer(summary_text, reply_markup=get_raw_row_control_keyboard(r_idx))
+
