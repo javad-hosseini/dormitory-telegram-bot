@@ -34,9 +34,10 @@ def test_settings(tmp_path: Path) -> Settings:
         DATA_DIR=data_dir,
         DB_PATH=db_path,
         SESSIONS_DIR=sessions_dir,
+        SPREADSHEET_UPLOAD_DIR=tmp_path / "incoming_spreadsheets",
         MAX_IMAGE_DIMENSION_PX=320,
         CLEANUP_TEMP_FILES_ON_FINISH=False,
-        INGESTION_MODE="mock_dry_run",
+        INGESTION_MODE="file_dropzone",
     )
 
 

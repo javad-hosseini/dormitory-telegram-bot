@@ -8,6 +8,7 @@ from src.config import Settings
 from src.database.repository import DatabaseRepository
 from src.services.dormitory_client import (
     AgentWebhookClient,
+    FileDropzoneClient,
     MockDryRunClient,
     OpenAICompatibleAgentClient,
     get_dormitory_client,
@@ -203,8 +204,29 @@ async def test_openai_compatible_agent_missing_key_fallback():
     assert results[0].success is True
 
 
+@pytest.mark.asyncio
+async def test_file_dropzone_client(tmp_path):
+    """Verify file dropzone client places rows on disk for Antigravity CLI without network calls."""
+    from src.services.dormitory_client import FileDropzoneClient
+
+    target_dir = tmp_path / "dropzone"
+    client = FileDropzoneClient(target_dir=target_dir)
+
+    rows = [{"Room": 101, "Amount": 4500000}, {"Room": 102, "Amount": 6000000}]
+    hashes = ["h1", "h2"]
+
+    results = await client.process_rows(rows, hashes, "Antigravity CLI instructions")
+    assert len(results) == 2
+    assert all(r.success for r in results)
+    assert target_dir.exists()
+    assert results[0].response_data["mode"] == "file_dropzone"
+
+
 def test_get_dormitory_client_factory():
     """Verify client factory returns correct class for each configuration mode."""
+    s_dropzone = Settings(INGESTION_MODE="file_dropzone")
+    assert isinstance(get_dormitory_client(s_dropzone), FileDropzoneClient)
+
     s_mock = Settings(INGESTION_MODE="mock_dry_run")
     assert isinstance(get_dormitory_client(s_mock), MockDryRunClient)
 

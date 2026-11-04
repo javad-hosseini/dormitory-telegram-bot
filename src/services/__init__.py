@@ -2,6 +2,7 @@
 
 from src.services.dormitory_client import (
     DormitoryClientBase,
+    FileDropzoneClient,
     RowResult,
     get_dormitory_client,
 )
@@ -12,6 +13,7 @@ __all__ = [
     "DormitoryClientBase",
     "ExcelBuilder",
     "ExcelParser",
+    "FileDropzoneClient",
     "ParsedSheetData",
     "RowResult",
     "get_dormitory_client",

@@ -7,6 +7,7 @@ import asyncio
 import json
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -39,6 +40,36 @@ class DormitoryClientBase(abc.ABC):
     ) -> List[RowResult]:
         """Process a list of transaction rows with instructions."""
         raise NotImplementedError
+
+
+class FileDropzoneClient(DormitoryClientBase):
+    """Saves uploaded transactions to local disk as a clean drop-zone for Antigravity CLI."""
+
+    def __init__(self, target_dir: Path | str) -> None:
+        self.target_dir = Path(target_dir)
+
+    async def process_rows(
+        self,
+        rows: List[Dict[str, Any]],
+        row_hashes: List[str],
+        instructions: str,
+    ) -> List[RowResult]:
+        self.target_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(
+            "[FILE DROPZONE] Placed %d rows into %s for manual Antigravity CLI processing",
+            len(rows),
+            self.target_dir,
+        )
+
+        return [
+            RowResult(
+                row_index=idx,
+                row_hash=r_hash,
+                success=True,
+                response_data={"destination": str(self.target_dir), "mode": "file_dropzone"},
+            )
+            for idx, r_hash in enumerate(row_hashes, start=2)
+        ]
 
 
 class MockDryRunClient(DormitoryClientBase):
@@ -312,7 +343,9 @@ def get_dormitory_client(settings: Settings) -> DormitoryClientBase:
     mode = settings.INGESTION_MODE
     logger.info("Initializing Dormitory Client with mode: %s", mode)
 
-    if mode == "agent_webhook":
+    if mode == "file_dropzone":
+        return FileDropzoneClient(target_dir=settings.SPREADSHEET_UPLOAD_DIR)
+    elif mode == "agent_webhook":
         return AgentWebhookClient(
             api_url=settings.DORMITORY_AGENT_API_URL,
             api_key=settings.DORMITORY_AGENT_API_KEY,

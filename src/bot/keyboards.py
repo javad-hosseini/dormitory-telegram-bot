@@ -88,7 +88,7 @@ def get_ingest_preview_keyboard() -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🚀 Confirm & Send to Dormitory System",
+                    text="🚀 Confirm & Place File for CLI",
                     callback_data="ingest:confirm",
                 ),
             ],

@@ -55,10 +55,20 @@ class Settings(BaseSettings):
         description="Whether to delete raw photo files after generating the raw Excel spreadsheet",
     )
 
+    # Spreadsheet SFTP / Drop-zone Destination (For Antigravity CLI manual processing)
+    SPREADSHEET_UPLOAD_DIR: Path = Field(
+        default=Path("incoming_spreadsheets"),
+        description="Target server/project directory where uploaded Excel files are placed for manual Antigravity CLI processing",
+    )
+    OVERWRITE_EXISTING_FILES: bool = Field(
+        default=True,
+        description="Whether to overwrite existing files with the same name in SPREADSHEET_UPLOAD_DIR",
+    )
+
     # Dormitory System Ingestion Settings
-    INGESTION_MODE: Literal["agent_webhook", "openai_compatible_agent", "mock_dry_run"] = Field(
-        default="mock_dry_run",
-        description="Mode for ingesting cleaned transactions",
+    INGESTION_MODE: Literal["file_dropzone", "agent_webhook", "openai_compatible_agent", "mock_dry_run"] = Field(
+        default="file_dropzone",
+        description="Mode for handling uploaded spreadsheets: 'file_dropzone' (default, places file in folder for Antigravity CLI)",
     )
     DORMITORY_AGENT_API_URL: str = Field(
         default="",
@@ -118,6 +128,7 @@ class Settings(BaseSettings):
         """Create runtime directories if they do not exist."""
         self.DATA_DIR.mkdir(parents=True, exist_ok=True)
         self.SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
+        self.SPREADSHEET_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         if self.DB_PATH.parent:
             self.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 

@@ -27,7 +27,7 @@ RUN uv sync --frozen --no-dev
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Create directory structure for persistent volume
-RUN mkdir -p /app/data/sessions /app/data/uploads /app/data/reports
+RUN mkdir -p /app/data/sessions /app/data/uploads /app/data/reports /app/incoming_spreadsheets
 
 VOLUME ["/app/data"]
 

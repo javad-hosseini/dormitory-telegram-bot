@@ -34,6 +34,7 @@ router = Router(name="ingest_cleaned_router")
 def format_preview_message(
     sheet_data: ParsedSheetData,
     instructions: str,
+    target_path: Path,
     duplicate_count: int = 0,
 ) -> str:
     """Format dry-run preview details for the cleaned spreadsheet."""
@@ -59,16 +60,26 @@ def format_preview_message(
             "ingested row(s) in this file based on row signatures.\n"
         )
 
+    mode_info = ""
+    if settings.INGESTION_MODE == "file_dropzone":
+        mode_info = (
+            f"📂 <b>Target Server Path:</b> <code>{target_path}</code>\n"
+            "⚡ <b>Mode:</b> Local Drop-Zone (No external API calls; ready for Antigravity CLI)\n"
+        )
+    else:
+        mode_info = f"🚀 <b>Mode:</b> {settings.INGESTION_MODE}\n"
+
     return (
-        "📋 <b>Cleaned Spreadsheet Ingestion Preview</b>\n\n"
+        "📋 <b>Spreadsheet Received & Analyzed</b>\n\n"
         f"📁 <b>File:</b> <code>{sheet_data.file_name}</code>\n"
         f"📑 <b>Sheet:</b> <code>{sheet_data.sheet_name}</code>\n"
         f"📊 <b>Total Rows:</b> <b>{len(sheet_data.rows)}</b>\n"
         f"🏷️ <b>Columns:</b> {cols_display}\n"
+        f"{mode_info}"
         f"{dup_alert}\n"
         "🔍 <b>Sample Data:</b>\n"
         f"{sample_text}\n"
-        "🤖 <b>Agent Instructions to be sent:</b>\n"
+        "📝 <b>Instructions for Antigravity CLI:</b>\n"
         f"<i>\"{instr_preview}\"</i>\n\n"
         "Choose an action to proceed:"
     )
@@ -79,10 +90,13 @@ def format_preview_message(
 async def prompt_upload_cleaned_file(message: Message, state: FSMContext) -> None:
     """Prompt user to upload the cleaned Excel file."""
     await state.set_state(IngestStates.waiting_for_file)
+    upload_dir = settings.SPREADSHEET_UPLOAD_DIR
     text = (
-        "📥 <b>Upload Cleaned Spreadsheet</b>\n\n"
-        "Please send the cleaned <code>.xlsx</code> file as a document.\n"
-        "<i>Tip: You can include custom agent instructions in the document caption!</i>"
+        "📥 <b>Upload Cleaned Spreadsheet (Drop-Zone)</b>\n\n"
+        f"Please send the cleaned <code>.xlsx</code> file as a document.\n"
+        f"The bot will place it into: <code>{upload_dir}</code>.\n\n"
+        "<i>Tip: You can include custom instructions in the document caption! "
+        "They will be saved alongside the spreadsheet for Antigravity CLI.</i>"
     )
     await message.answer(text, reply_markup=get_cancel_keyboard("ingest:cancel"))
 
@@ -99,7 +113,7 @@ async def handle_uploaded_document(message: Message, state: FSMContext, bot: Bot
     if not doc:
         return
 
-    file_name = doc.file_name or ""
+    file_name = doc.file_name or "cleaned_transactions.xlsx"
     if not file_name.lower().endswith(".xlsx"):
         # If explicitly waiting for file, alert user
         if current_state == IngestStates.waiting_for_file.state:
@@ -108,16 +122,16 @@ async def handle_uploaded_document(message: Message, state: FSMContext, bot: Bot
             )
         return
 
-    progress_msg = await message.answer("⏳ <b>Downloading and analyzing .xlsx file...</b>")
+    progress_msg = await message.answer("⏳ <b>Receiving and placing .xlsx file into drop-zone...</b>")
 
-    temp_dir = settings.DATA_DIR / "uploads"
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    temp_file = temp_dir / f"{uuid.uuid4().hex}_{file_name}"
+    target_dir = settings.SPREADSHEET_UPLOAD_DIR
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target_file = target_dir / file_name
 
     try:
-        await bot.download(doc, destination=temp_file)
+        await bot.download(doc, destination=target_file)
         parser = ExcelParser()
-        sheet_data = parser.parse_cleaned_workbook(temp_file, original_file_name=file_name)
+        sheet_data = parser.parse_cleaned_workbook(target_file, original_file_name=file_name)
 
         if not sheet_data.rows:
             await progress_msg.edit_text(
@@ -132,6 +146,11 @@ async def handle_uploaded_document(message: Message, state: FSMContext, bot: Bot
         else:
             instructions = settings.get_effective_default_instructions()
 
+        # Save companion instructions file for Antigravity CLI
+        stem_name = Path(file_name).stem
+        instr_file = target_dir / f"{stem_name}_instructions.md"
+        instr_file.write_text(instructions, encoding="utf-8")
+
         # Check duplicates in DB
         db = get_db()
         existing_hashes = await db.check_row_hashes(sheet_data.row_hashes)
@@ -144,7 +163,7 @@ async def handle_uploaded_document(message: Message, state: FSMContext, bot: Bot
             else IngestStates.preview_and_confirm
         )
         await state.update_data(
-            file_path=str(temp_file),
+            file_path=str(target_file),
             file_name=sheet_data.file_name,
             file_hash=sheet_data.file_hash,
             sheet_name=sheet_data.sheet_name,
@@ -155,7 +174,9 @@ async def handle_uploaded_document(message: Message, state: FSMContext, bot: Bot
             duplicate_hashes=list(existing_hashes),
         )
 
-        preview_msg = format_preview_message(sheet_data, instructions, duplicate_count)
+        preview_msg = format_preview_message(
+            sheet_data, instructions, target_file, duplicate_count
+        )
         keyboard = (
             get_ingest_duplicate_keyboard()
             if duplicate_count > 0
@@ -184,13 +205,19 @@ async def handle_edit_instructions(callback: CallbackQuery, state: FSMContext) -
 
 @router.message(IngestStates.editing_instructions)
 async def handle_new_instructions_text(message: Message, state: FSMContext) -> None:
-    """Save new custom instructions and re-render the preview."""
+    """Save new custom instructions, update companion file, and re-render the preview."""
     if not message.text:
         await message.answer("Please send instructions as text.")
         return
 
     new_instructions = message.text.strip()
     data = await state.get_data()
+    file_path = Path(data.get("file_path", ""))
+    if file_path.exists():
+        # Update companion instructions file for Antigravity CLI
+        instr_file = file_path.parent / f"{file_path.stem}_instructions.md"
+        instr_file.write_text(new_instructions, encoding="utf-8")
+
     await state.update_data(instructions=new_instructions)
     await state.set_state(IngestStates.preview_and_confirm)
 
@@ -205,7 +232,9 @@ async def handle_new_instructions_text(message: Message, state: FSMContext) -> N
     )
     dup_hashes = data.get("duplicate_hashes", [])
 
-    preview_msg = format_preview_message(sheet_data, new_instructions, len(dup_hashes))
+    preview_msg = format_preview_message(
+        sheet_data, new_instructions, file_path, len(dup_hashes)
+    )
     keyboard = (
         get_ingest_duplicate_keyboard() if dup_hashes else get_ingest_preview_keyboard()
     )
@@ -216,7 +245,7 @@ async def handle_new_instructions_text(message: Message, state: FSMContext) -> N
 async def handle_confirm_ingestion(
     callback: CallbackQuery, state: FSMContext, bot: Bot
 ) -> None:
-    """Execute ingestion into the Dormitory System/Agent."""
+    """Execute ingestion into the Dormitory System or place into drop-zone for Antigravity CLI."""
     action = callback.data
     data = await state.get_data()
 
@@ -226,6 +255,7 @@ async def handle_confirm_ingestion(
     instructions: str = data.get("instructions", "")
     dup_hashes_set = set(data.get("duplicate_hashes", []))
     file_name: str = data.get("file_name", "cleaned.xlsx")
+    file_path = data.get("file_path", str(settings.SPREADSHEET_UPLOAD_DIR / file_name))
     user_id = callback.from_user.id
 
     if not rows:
@@ -255,11 +285,11 @@ async def handle_confirm_ingestion(
         await state.clear()
         return
 
-    await callback.answer("Starting ingestion...")
+    await callback.answer("Processing file...")
     status_msg = None
     if callback.message and isinstance(callback.message, Message):
         status_msg = await callback.message.edit_text(
-            f"🚀 <b>Connecting to Dormitory System ({settings.INGESTION_MODE})...</b>\n"
+            f"🚀 <b>Placing spreadsheet into drop-zone ({settings.INGESTION_MODE})...</b>\n"
             f"Processing <b>{len(rows_to_process)}</b> transactions..."
         )
 
@@ -292,13 +322,23 @@ async def handle_confirm_ingestion(
     failed_count = len(failed_rows)
 
     summary_text = (
-        "🏁 <b>Dormitory Ingestion Finished!</b>\n\n"
-        f"📊 <b>Results:</b>\n"
-        f"• ✅ <b>Succeeded:</b> {succeeded_count} rows\n"
+        "🏁 <b>Spreadsheet Ready on Server!</b>\n\n"
+        f"📊 <b>Summary:</b>\n"
+        f"• ✅ <b>Tracked:</b> {succeeded_count} rows\n"
         f"• ❌ <b>Failed:</b> {failed_count} rows\n\n"
     )
 
-    if failed_count == 0:
+    if settings.INGESTION_MODE == "file_dropzone":
+        summary_text += (
+            f"📁 <b>Saved File:</b> <code>{file_path}</code>\n"
+            f"📝 <b>Instructions File:</b> <code>{Path(file_path).stem}_instructions.md</code>\n\n"
+            "💻 <b>Ready for Antigravity CLI!</b>\n"
+            "You can now run in the project terminal:\n"
+            f"<code>agy \"Check {file_name} in {settings.SPREADSHEET_UPLOAD_DIR} and insert clean transactions into SQLite\"</code>"
+        )
+        if status_msg:
+            await status_msg.edit_text(summary_text, reply_markup=get_main_menu_keyboard())
+    elif failed_count == 0:
         summary_text += "🎉 All transactions were verified and posted successfully!"
         if status_msg:
             await status_msg.edit_text(summary_text, reply_markup=get_main_menu_keyboard())

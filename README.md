@@ -87,19 +87,16 @@ dormitory-telegram-bot/
   - **Sheet 2 (`_AI_EXTRACTION_GUIDE`):**
     - Contains instructions and a 15-line ready-to-run Python snippet for AI Code Interpreters to iterate `ws._images` and correlate receipt images to each resident row and block coordinate.
 
-### 3. Feature 2: Cleaned Spreadsheet Ingestion & Dormitory Sync
-- **Automatic File Detection:** Send `/ingest_cleaned` or directly upload any `.xlsx` document outside an active raw session.
-- **Data Parsing & Normalization:** Strips empty rows, normalizes date/datetime values to ISO-8601 strings, and ignores metadata tabs.
-- **Dry-Run Preview:** Displays file name, sheet name, column list, total row count, formatted JSON samples of Rows 1 & 2, and current agent instructions.
-- **Dynamic Instruction Customization:** Tap `[✏️ Edit/Add Custom Instructions]` to update the LLM prompt for ledger categorization before committing.
-- **Deterministic SHA-256 Idempotency:** Each row is fingerprinted with `sha256(file_hash + row_index + canonical_row_json)`. If duplicate rows are detected, the bot warns the user and offers:
-  - `[⏩ Skip Duplicates]`
-  - `[⚠️ Force Re-insert]`
-- **Pluggable Integration Modes (`INGESTION_MODE`):**
-  1. `mock_dry_run`: Default safe mode for local testing without external services.
-  2. `agent_webhook`: Sends async HTTP POST requests via `httpx` to `DORMITORY_AGENT_API_URL` with Bearer auth and exponential retry backoff.
-  3. `openai_compatible_agent`: Sends structured prompts to OpenAI, vLLM, Ollama, or LiteLLM endpoints with ledger analysis callbacks.
-- **Failed Rows Report (`failed_rows_report.xlsx`):** If any transactions fail validation, the bot compiles only the failed rows into a formatted Excel sheet with an appended `"Error_Reason"` column and sends it back to the manager for correction.
+### 3. Feature 2: Cleaned Spreadsheet Ingestion & Antigravity CLI Drop-Zone
+- **Zero External API Dependency:** Functions directly as an authenticated SFTP-like file channel from mobile to server.
+- **Configurable Drop-Zone Path:** Uploaded `.xlsx` spreadsheets are saved directly into `SPREADSHEET_UPLOAD_DIR` (e.g. `./incoming_spreadsheets` or project root).
+- **Companion Instructions File:** If custom instructions are provided in the caption, the bot saves `{filename}_instructions.md` alongside the `.xlsx` file.
+- **Manual Antigravity CLI Integration:** After uploading, the bot returns a confirmation message with the exact command to run:
+  ```bash
+  agy "Check cleaned_transactions.xlsx in incoming_spreadsheets/ and insert clean data into SQLite"
+  ```
+- **Data Parsing & Duplicate Checking:** Checks row counts, normalizes dates, and hashes rows with deterministic SHA-256 to alert if a file was previously uploaded.
+- **Alternative Optional Modes:** Also supports `agent_webhook`, `openai_compatible_agent`, and `mock_dry_run` if external API sync is ever desired.
 
 ---
 
@@ -159,9 +156,11 @@ docker compose down
 | `DATA_DIR` | path | `data` | Base directory for runtime storage |
 | `DB_PATH` | path | `data/dormitory_bot.db` | SQLite database file location |
 | `SESSIONS_DIR` | path | `data/sessions` | Directory for active raw photo sessions |
+| `SPREADSHEET_UPLOAD_DIR` | path | `incoming_spreadsheets` | Directory where uploaded .xlsx files are placed for Antigravity CLI |
+| `OVERWRITE_EXISTING_FILES` | boolean | `true` | Overwrite existing spreadsheet files with same name in drop-zone |
 | `MAX_IMAGE_DIMENSION_PX` | integer | `320` | Max pixel dimension for embedded cell thumbnails |
 | `CLEANUP_TEMP_FILES_ON_FINISH` | boolean | `false` | Clean up raw image files after exporting raw xlsx |
-| `INGESTION_MODE` | string | `mock_dry_run` | `mock_dry_run`, `agent_webhook`, or `openai_compatible_agent` |
+| `INGESTION_MODE` | string | `file_dropzone` | `file_dropzone` (default), `mock_dry_run`, `agent_webhook`, `openai_compatible_agent` |
 | `DORMITORY_AGENT_API_URL` | string | `""` | Target webhook URL for dormitory agent / API |
 | `DORMITORY_AGENT_API_KEY` | string | `""` | Bearer token for agent API |
 | `DORMITORY_BACKEND_API_URL` | string | `""` | Backend ERP / ledger endpoint for LLM tool call |

@@ -136,6 +136,9 @@ async def test_ingest_cancel_and_error_report(
     assert await fsm_context.get_state() is None
 
     # Test confirmation with simulated failed row
+    from src.config import settings
+    monkeypatch.setattr(settings, "INGESTION_MODE", "mock_dry_run")
+
     await fsm_context.set_state(IngestStates.preview_and_confirm)
     await fsm_context.update_data(
         file_name="mixed_data.xlsx",

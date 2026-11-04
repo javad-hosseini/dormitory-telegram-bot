@@ -9,6 +9,7 @@ services:
       - .env
     volumes:
       - ./data:/app/data
+      - ./incoming_spreadsheets:/app/incoming_spreadsheets
     environment:
       - PYTHONUNBUFFERED=1
     logging:
