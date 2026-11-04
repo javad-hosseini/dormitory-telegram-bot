@@ -112,3 +112,4 @@ echo "=== Port 8080 ===" && ss -tulpn | grep :8080 || echo "Port 8080: DOWN" ; \
 echo "=== Docker Bot ===" && docker ps --filter "name=dormitory-telegram-bot" --format "table {{.Names}}\t{{.Status}}" ; \
 echo "=== SOCKS5 Proxy ===" && ss -tulpn | grep :1080 || echo "Proxy 1080: DOWN"
 ```
+
