@@ -111,6 +111,8 @@ class Settings(BaseSettings):
     @classmethod
     def parse_allowed_user_ids(cls, v: object) -> list[int]:
         """Parse comma-separated string or list into a list of integers."""
+        if isinstance(v, (int, float)):
+            return [int(v)]
         if isinstance(v, str):
             v = v.strip()
             if not v:

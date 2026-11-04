@@ -45,6 +45,10 @@ data/
 .coverage
 htmlcov/
 
+# Incoming spreadsheets drop-zone
+incoming_spreadsheets/*
+!incoming_spreadsheets/.gitkeep
+
 # IDE & OS
 .idea/
 .vscode/

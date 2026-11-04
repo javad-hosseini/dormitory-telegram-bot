@@ -1,5 +1,6 @@
 services:
   dormitory-bot:
+    image: dormitory-telegram-bot:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -8,8 +9,8 @@ services:
     env_file:
       - .env
     volumes:
-      - ./data:/app/data
-      - ./incoming_spreadsheets:/app/incoming_spreadsheets
+      - ./data:/app/data:z
+      - ./incoming_spreadsheets:/app/incoming_spreadsheets:z
     environment:
       - PYTHONUNBUFFERED=1
     logging:
