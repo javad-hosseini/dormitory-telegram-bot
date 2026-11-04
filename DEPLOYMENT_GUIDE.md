@@ -285,3 +285,32 @@ sqlite3 data/dormitory_bot.db ".tables"
 sqlite3 data/dormitory_bot.db "SELECT * FROM sessions;"
 sqlite3 data/dormitory_bot.db "SELECT * FROM row_blocks;"
 ```
+
+---
+
+## 9. Live VPS Production Setup Details (`171.22.24.206`)
+
+The bot is currently deployed and active on your AlmaLinux 9.8 VPS:
+
+- **Bot Directory:** `/home/javad/projects/dormitory-telegram-bot/`
+- **Main Dormitory Project:** `/home/javad/projects/dormitory-management/`
+- **Drop-Zone Volume Mount:**
+  ```yaml
+  volumes:
+    - ./data:/app/data:z
+    - /home/javad/projects/dormitory-management:/app/incoming_spreadsheets:z
+  ```
+- **Proxy Configuration:** `TELEGRAM_PROXY_URL=socks5://127.0.0.1:1080` (powered by the server's Dante/OpenVPN namespace via `vpn-ctl`).
+- **Container Network Mode:** `network_mode: "host"` (allows direct localhost communication to `127.0.0.1:1080` with zero inbound open ports).
+
+### How to process uploaded files with Antigravity on the VPS:
+1. Upload `.xlsx` via Telegram to `@javad_personal_assistant_bot`.
+2. The file is placed directly in `/home/javad/projects/dormitory-management/{filename}.xlsx`.
+3. SSH into the server and run Antigravity CLI:
+   ```bash
+   ssh azimi
+   cd ~/projects/dormitory-management
+   agy "Process the uploaded transaction spreadsheet in this directory following BATCH_RECEIPT_PROTOCOL.md, run record_receipt for valid rows, and delete the spreadsheet file once finished."
+   ```
+
+
