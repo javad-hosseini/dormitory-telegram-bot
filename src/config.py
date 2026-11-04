@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     ALLOWED_TELEGRAM_USER_IDS: list[int] = Field(
         default_factory=list,
         description="Comma-separated list of allowed Telegram user IDs",
+    )
+    TELEGRAM_PROXY_URL: Optional[str] = Field(
+        default=None,
+        description="Optional HTTP or SOCKS5 proxy URL for Telegram API (e.g. http://127.0.0.1:2080 or socks5://127.0.0.1:10808)",
     )
 
     # Storage paths
