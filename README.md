@@ -44,17 +44,21 @@ dormitory-telegram-bot/
 │       ├── __init__.py
 │       ├── excel_builder.py    # OpenPyXL + Pillow generator with cell-anchored images & guide tab
 │       ├── excel_parser.py     # OpenPyXL parser, deterministic row hasher, and failed rows report
-│       └── dormitory_client.py # Modular async client (mock_dry_run, agent_webhook, openai_agent)
+│       └── dormitory_client.py # Modular async client (file_dropzone, mock, webhook, openai)
 └── tests/
-    ├── conftest.py             # Pytest fixtures and test database setup
-    ├── test_config.py          # Settings validation tests
-    ├── test_database.py        # SQLite repository and idempotency tests
-    ├── test_excel_builder.py   # Raw spreadsheet and image anchoring tests
-    ├── test_excel_parser.py    # Cleaned spreadsheet parsing and error report tests
-    ├── test_middlewares.py     # Whitelist and album debounce middleware tests
-    ├── test_dormitory_client.py# Ingestion client modes and fallback tests
-    ├── test_raw_data_handler.py# Raw data collection workflow tests
-    └── test_ingest_handler.py  # Ingestion preview, instruction editing, and sync tests
+    ├── conftest.py             # Shared fixtures: mock Bot, FSMContext, synthetic Pillow receipts
+    ├── unit/
+    │   ├── test_config.py      # Env parsing & allowed user ID list validation
+    │   ├── test_repository.py  # SQLite persistence, crash recovery, undo/clear, SHA-256 idempotency
+    │   ├── test_excel_builder.py # OpenPyXL cell-anchored images & guide sheet verification
+    │   ├── test_excel_parser.py  # Cleaned .xlsx parser, date normalization, failed rows report
+    │   ├── test_dormitory_client.py # File drop-zone, webhook, and OpenAI agent modes
+    │   ├── test_middlewares.py # AuthMiddleware whitelist & AlbumMiddleware debouncing
+    │   ├── test_common_handlers.py # /start, /help, /cancel command handlers
+    │   └── test_main.py        # Application bootstrapping and proxy initialization
+    └── integration/
+        ├── test_raw_data_flow.py # Complete Feature 1 raw data collection FSM flow
+        └── test_ingest_cleaned_flow.py # Complete Feature 2 spreadsheet ingestion FSM flow
 ```
 
 ---
@@ -153,6 +157,7 @@ docker compose down
 | :--- | :--- | :--- | :--- |
 | `BOT_TOKEN` | string | *required* | Telegram Bot API token from `@BotFather` |
 | `ALLOWED_TELEGRAM_USER_IDS` | string | `""` | Comma-separated whitelisted Telegram User IDs |
+| `TELEGRAM_PROXY_URL` | string | `""` | Optional HTTP or SOCKS5 proxy URL (e.g. `socks5://127.0.0.1:10808` or `http://127.0.0.1:2080`) |
 | `DATA_DIR` | path | `data` | Base directory for runtime storage |
 | `DB_PATH` | path | `data/dormitory_bot.db` | SQLite database file location |
 | `SESSIONS_DIR` | path | `data/sessions` | Directory for active raw photo sessions |
