@@ -147,3 +147,4 @@ def test_excel_builder_geometry_and_ai_extraction(tmp_path: Path, synthetic_rece
     assert "IMAGE_ANCHOR: B3" in extracted_mapping["Resident_2"]["Block_1"]
     assert "IMAGE_ANCHOR: C3" in extracted_mapping["Resident_2"]["Block_2"]
     assert extracted_mapping["Resident_2"]["Block_3"] == "Room 205 - Ali Rezaei - 8,000,000 IRR Rent"
+

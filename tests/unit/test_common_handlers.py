@@ -64,3 +64,4 @@ async def test_handle_cancel_without_active_state(
     msg.answer.assert_awaited_once()
     args, _ = msg.answer.call_args
     assert "No active operation was running" in args[0]
+

@@ -120,3 +120,4 @@ def test_failed_rows_report_generation(tmp_path: Path):
     assert ws.cell(row=2, column=4).value == "Non-numeric amount"
     assert ws.cell(row=3, column=4).value == "Missing room number"
     assert ws.cell(row=4, column=4).value == "Negative amount not allowed"
+

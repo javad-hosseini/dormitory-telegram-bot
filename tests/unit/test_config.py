@@ -41,3 +41,4 @@ def test_settings_ensure_directories(tmp_path: Path):
 
     assert data_dir.exists()
     assert sessions_dir.exists()
+

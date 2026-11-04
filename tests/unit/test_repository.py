@@ -154,3 +154,4 @@ async def test_transaction_idempotency(db_repo: DatabaseRepository):
     # Check hashes again
     existing = await db_repo.check_row_hashes(row_hashes)
     assert existing == {"hash_tx_001"}
+

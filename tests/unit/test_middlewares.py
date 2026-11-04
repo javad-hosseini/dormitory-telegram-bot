@@ -128,3 +128,4 @@ async def test_album_middleware_single_message_passthrough():
     assert result == "SINGLE_OK"
     handler.assert_awaited_once()
     assert "album" not in data
+
