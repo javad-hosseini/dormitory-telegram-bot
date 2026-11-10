@@ -57,17 +57,18 @@ pkill -f "manage.py runserver 0.0.0.0:8080"
 
 ## 🤖 2. Telegram Bot (Docker Containers)
 
-Directory: `~/projects/dormitory-telegram-bot/`
+Directory: `~/projects/dorm/dormitory-telegram-bot/`
 
-| Action | Command |
-| :--- | :--- |
-| **Start Bot (Background)** | `cd ~/projects/dormitory-telegram-bot && docker compose up -d` |
-| **View Real-Time Logs** | `cd ~/projects/dormitory-telegram-bot && docker compose logs -f` |
-| **View Last 50 Log Lines** | `cd ~/projects/dormitory-telegram-bot && docker compose logs --tail 50` |
-| **Check Container Status** | `cd ~/projects/dormitory-telegram-bot && docker compose ps` |
-| **Restart Bot** | `cd ~/projects/dormitory-telegram-bot && docker compose restart` |
-| **Stop & Remove Container** | `cd ~/projects/dormitory-telegram-bot && docker compose down` |
-| **Rebuild After Code Edit** | `cd ~/projects/dormitory-telegram-bot && docker compose up -d --build` |
+### Management Script (`./bot.sh`)
+| Action | Helper Script | Docker Compose Command | Systemd Command |
+| :--- | :--- | :--- | :--- |
+| **Start Bot (Background)** | `./bot.sh start` | `docker compose up -d` | `sudo systemctl start dormitory-bot` |
+| **View Real-Time Logs** | `./bot.sh logs` | `docker compose logs -f` | `journalctl -u dormitory-bot -f` |
+| **Check Container Status** | `./bot.sh status` | `docker compose ps` | `sudo systemctl status dormitory-bot` |
+| **Restart Bot** | `./bot.sh restart` | `docker compose restart` | `sudo systemctl restart dormitory-bot` |
+| **Stop Container** | `./bot.sh stop` | `docker compose down` | `sudo systemctl stop dormitory-bot` |
+| **Rebuild Container** | `./bot.sh build` | `docker compose build` | - |
+| **Run Tests Locally** | `./bot.sh test` | - | - |
 
 ---
 
@@ -112,4 +113,3 @@ echo "=== Port 8080 ===" && ss -tulpn | grep :8080 || echo "Port 8080: DOWN" ; \
 echo "=== Docker Bot ===" && docker ps --filter "name=dormitory-telegram-bot" --format "table {{.Names}}\t{{.Status}}" ; \
 echo "=== SOCKS5 Proxy ===" && ss -tulpn | grep :1080 || echo "Proxy 1080: DOWN"
 ```
-
